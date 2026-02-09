@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -117,7 +118,7 @@ static int parseDialog(uint8_t *blob, const char *name)
     const char *outName = mapDialog(name);
     if(outName == NULL)
     {
-        printf("No map entry for %s.bin\n", name);
+        fprintf(stderr, "No map entry for %s.bin\n", name);
         return 0;
     }
 
@@ -145,10 +146,11 @@ static int parseDialog(uint8_t *blob, const char *name)
         FILE *f = fopen(outPath, "wb");
         if(f == NULL)
         {
-            printf("Error opening %s\n", outPath);
+            fprintf(stderr, "Error opening %s\n", outPath);
             return 1;
         }
 
+        // Loop over bottom messages
         fprintf(f, "type: Dialog\n");
         fprintf(f, "bottom:\n");
         MESSAGE *msg = diags[i]->start;
@@ -159,7 +161,8 @@ static int parseDialog(uint8_t *blob, const char *name)
             msg = (MESSAGE *)(((uint8_t *)msg) + 2 + msg->length);
         }
 
-        fprintf(f, "top:\n"); //TODO: To file
+        // Loop over top messages
+        fprintf(f, "top:\n");
         count = *(uint8_t *)msg;
         msg = (MESSAGE *)(((uint8_t *)msg) + 0x01);
         for(uint8_t j = 0; j < count; j++)
@@ -168,6 +171,7 @@ static int parseDialog(uint8_t *blob, const char *name)
             msg = (MESSAGE *)(((uint8_t *)msg) + 2 + msg->length);
         }
 
+        // Close output file
         fclose(f);
     }
 
@@ -182,70 +186,73 @@ static int parseDialog(uint8_t *blob, const char *name)
  */
 static int process(const char *name, const char *file)
 {
+    int ret = 1;
+
     // Open file
     FILE *f = fopen(file, "rb");
-    if(!f)
+    if(f)
     {
-        printf("%s not found\n", file);
-        return 1;
-    }
+        // Get filesize from open file
+        if(fseek(f, 0L, SEEK_END) == 0)
+        {
+            size_t filesize = ftell(f);
+            if(filesize > 32 && filesize < 4096)
+            {
+                // Create buffer and read file into it
+                if(fseek(f, 0L, SEEK_SET) == 0)
+                {
+                    uint8_t blob[filesize];
+                    if(fread(blob, filesize, 1, f) == 1)
+                    {
+                        // TODO: Understand libyaml
+                        /*
+                        yaml_emitter_t emitter;
+                        memset(&emitter, 0, sizeof(emitter));
+                        if(!yaml_emitter_initialize(&emitter))
+                        {
+                            printf("YAML error (1)");
+                            return 1;
+                        }
 
-    // Get filesize from open file
-    fseek(f, 0L, SEEK_END);
-    size_t filesize = ftell(f);
-    if(filesize < 8 || filesize > 4096) // TODO: Biggest .bin file I spotted was 2415 bytes
-    {
-        printf("Sanity error (%s)\n", file);
-        return 1;
-    }
+                        yaml_emitter_set_output_file(&emitter, stdout);
+                        yaml_emitter_set_canonical(&emitter, canonical);
+                        yaml_emitter_set_unicode(&emitter, unicode);
+                        */
 
-    // Create buffer and read file into it
-    fseek(f, 0L, SEEK_SET);
-    uint8_t blob[filesize];
-    if(fread(blob, filesize, 1, f) != 1)
-    {
-        printf("Error reading %s\n", file);
+                        // Get the file magic (first two bytes) as 16 bit unsigned integer and compare it against known file magics, then call the corresponding parser
+                        uint16_t magic = *(uint16_t *)blob;
+                        switch(magic)
+                        {
+                            case 0x0703: // .dialog
+                                //            printf("Converting dialog %s\n", file);
+                                ret = parseDialog(blob, name);
+                                break;
+                            case 0x0303: // .quiz_q
+                            case 0x0103:
+                                printf("Converting quiz_q %s\n", file);
+                                ret = parseQuiz(blob, name);
+                                break;
+                            default:
+                                fprintf(stderr, "Unknown file magic for %s: 0x%04X\n", file, magic);
+                        }
+                    }
+                    else
+                        fprintf(stderr, "Error reading %s\n", file);
+                }
+                else
+                    fprintf(stderr, "I/O error: %s (%u)\n", strerror(errno), errno);
+            }
+            else
+                fprintf(stderr, "Sanity error (%s)\n", file);
+        }
+        else
+            fprintf(stderr, "I/O error: %s (%u)\n", strerror(errno), errno);
+
+        // Close input file
         fclose(f);
-        return 1;
     }
-
-    // The file handle is no longer needed, close file
-    fclose(f);
-
-    // TODO: Understand libyaml
-    /*
-    yaml_emitter_t emitter;
-    memset(&emitter, 0, sizeof(emitter));
-    if(!yaml_emitter_initialize(&emitter))
-    {
-        printf("YAML error (1)");
-        return 1;
-    }
-
-    yaml_emitter_set_output_file(&emitter, stdout);
-    yaml_emitter_set_canonical(&emitter, canonical);
-    yaml_emitter_set_unicode(&emitter, unicode);
-    */
-
-    int ret;
-
-    // Get the file magic (first two bytes) as 16 bit unsigned integer and compare it against known file magics, then call the corresponding parser
-    uint16_t magic = *(uint16_t *)blob;
-    switch(magic)
-    {
-        case 0x0703: // .dialog
-//            printf("Converting dialog %s\n", file);
-            ret = parseDialog(blob, name);
-            break;
-        case 0x0303: // .quiz_q
-        case 0x0103:
-            printf("Converting quiz_q %s\n", file);
-            ret = parseQuiz(blob, name);
-            break;
-        default:
-            printf("Unknown file magic for %s: 0x%04X\n", file, magic);
-            return 1;
-    }
+    else
+        fprintf(stderr, "%s not found\n", file);
 
     return ret;
 }
@@ -260,7 +267,7 @@ int main(int argc, char *argv[])
     // Check if argument is there
     if(argc < 2)
     {
-        printf("Mach gescheit\n");
+        fprintf(stderr, "Usage: %s input/path\n", argv[0]);
         return 1;
     }
 
@@ -268,22 +275,25 @@ int main(int argc, char *argv[])
     DIR *folder = opendir(argv[1]);
     if(!folder)
     {
-        printf("Error opening %s\n", argv[1]);
+        fprintf(stderr, "Error opening %s\n", argv[1]);
         return 1;
     }
 
     // Loop over all files in the folder, create a new path array containing the folder + the filename and process the files
     size_t sl = strlen(argv[1]);
-    char newPath[sl + 33];
+    char newPath[sl + (1 + 6 + 1 + 3 + 1)]; // path + '/' + filename + '.' + extension + '\0'
     memcpy(newPath, argv[1], sl);
     newPath[sl++] = '/';
     struct dirent *entry;
     int ret = 0;
     while (ret == 0 && (entry = readdir(folder)) != NULL) {
-        if(entry->d_name[0] == '.' || entry->d_type != DT_REG || strlen(entry->d_name) != 6 + 1 + 3)
+        if(entry->d_name[0] == '.' || entry->d_type != DT_REG || strlen(entry->d_name) != 6 + 1 + 3) // filename + '.' + extension
             continue;
 
+        // Copy filename to end of new path
         strcpy(newPath + sl, entry->d_name);
+
+        // Cut extension from filename
         entry->d_name[6] = '\0';
         ret = process(entry->d_name, newPath);
     }
