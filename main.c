@@ -97,7 +97,7 @@ static int parseQuiz(uint8_t *blob, const char *name)
         // Parse them and write out as YAML
         for(uint8_t j = 0; j < count; j++)
         {
-            bool answer = msg->cmd > 0x80;
+            bool answer = msg->cmd & ~(0x80);
             if(answer && firstAnswer)
             {
                 printf("options:\n"); // TODO: To file
