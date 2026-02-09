@@ -1,12 +1,11 @@
+#include <dirent.h>
 #include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <dirent.h>
-#include <yaml.h>
 
 #include "dialogDic.h"
 
@@ -210,22 +209,6 @@ static int process(const char *name, const char *file)
                     uint8_t blob[filesize];
                     if(fread(blob, filesize, 1, f) == 1)
                     {
-                        // TODO: Understand libyaml
-                        /*
-                        yaml_emitter_t emitter;
-                        memset(&emitter, 0, sizeof(emitter));
-                        if(!yaml_emitter_initialize(&emitter))
-                        {
-                            printf("YAML error (1)");
-                            return 1;
-                        }
-
-                        yaml_emitter_set_output_file(&emitter, stdout);
-                        yaml_emitter_set_canonical(&emitter, canonical);
-                        yaml_emitter_set_unicode(&emitter, unicode);
-                        */
-
-                        // Get the file magic (first two bytes) as 16 bit unsigned integer and compare it against known file magics, then call the corresponding parser
                         uint16_t magic = *(uint16_t *)blob;
                         switch(magic)
                         {
