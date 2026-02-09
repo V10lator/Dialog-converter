@@ -134,12 +134,13 @@ static int parseDialog(uint8_t *blob, const char *name)
 
     // The path buffer for the files to write to. The Xes will be replaced later
     char outPath[] = "out/XX/diag/XXXX.dialog";
+    // Replace XXXX with the file name
+    memcpy(outPath + sizeof("out/XX/diag/") - 1, outName, 4);
 
     for(int i = 0; i < 3; i++)
     {
-        // Replace the first XX in out path buffer with the language (EN/FR/DE)
+        // Replace the XX in out path buffer with the language (EN/FR/DE)
         memcpy(outPath + sizeof("out/") - 1, lang[i], 2);
-        memcpy(outPath + sizeof("out/XX/diag/") - 1, outName, 4);
 //        printf("--> %s\n", outPath);
 
         // Create the path for the file recursively
