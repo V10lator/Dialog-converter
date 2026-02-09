@@ -133,20 +133,20 @@ static int parseDialog(uint8_t *blob, const char *name)
         diags[i] = (DIALOGUE *)(blob + lf->offsets[i]);
 
     // The path buffer for the files to write to. The Xes will be replaced later
-    char outPath[] = "out/XX/diag/XXXX.dialog";
+    char outPath[] = "XX/diag/XXXX.dialog";
     // Replace XXXX with the file name
-    memcpy(outPath + sizeof("out/XX/diag/") - 1, outName, 4);
+    memcpy(outPath + sizeof("XX/diag/") - 1, outName, 4);
 
     for(int i = 0; i < 3; i++)
     {
         // Replace the XX in out path buffer with the language (EN/FR/DE)
-        memcpy(outPath + sizeof("out/") - 1, lang[i], 2);
+        memcpy(outPath, lang[i], 2);
 //        printf("--> %s\n", outPath);
 
         // Create the path for the file recursively
-        outPath[sizeof("out/XX/diag") - 1] = '\0';
+        outPath[sizeof("XX/diag") - 1] = '\0';
         mkdirRecursive(outPath);
-        outPath[sizeof("out/XX/diag") - 1] = '/';
+        outPath[sizeof("XX/diag") - 1] = '/';
 
         // Open the .dialog file for writing and write YAML to it
         FILE *f = fopen(outPath, "wb");
