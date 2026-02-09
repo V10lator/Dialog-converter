@@ -52,11 +52,16 @@ static void mkdirRecursive(const char *path)
     }
 }
 
-/* Maps a .bin filename to the corresponding .dialog filename */
+/*
+ * Maps a .bin filename to the corresponding .dialog filename
+ *
+ * Expects a 6 char string as input
+ * (null terminator not counted nor needed as it compares 6 bytes only)
+ */
 static const char *mapDialog(const char *in)
 {
     for(size_t i = 0; i < DIAG_LIST_MAX; i++)
-        if(strcmp(in, diagInList[i]) == 0)
+        if(memcmp(in, diagInList[i], 6) == 0)
             return diagOutList[i];
 
     return NULL;
@@ -288,7 +293,8 @@ int main(int argc, char *argv[])
     struct dirent *entry;
     int ret = 0;
     while (ret == 0 && (entry = readdir(folder)) != NULL) {
-        if(entry->d_name[0] == '.' || entry->d_type != DT_REG || strlen(entry->d_name) != 6 + 1 + 3 || strcmp(entry->d_name + 6, ".bin") != 0) // filename + '.' + extension
+        // Check if file is not hidden, is a real file, filename is 10 chars long (including extension) and extension is .bin. Skip otherwise
+        if(entry->d_name[0] == '.' || entry->d_type != DT_REG || strlen(entry->d_name) != 6 + 1 + 3 /* filename + '.' + extension */ || memcmp(entry->d_name + 6, ".bin", 4) != 0)
             continue;
 
         // Copy filename to end of new path
