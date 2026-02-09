@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
     struct dirent *entry;
     int ret = 0;
     while (ret == 0 && (entry = readdir(folder)) != NULL) {
-        if(entry->d_name[0] == '.' || entry->d_type != DT_REG || strlen(entry->d_name) != 6 + 1 + 3) // filename + '.' + extension
+        if(entry->d_name[0] == '.' || entry->d_type != DT_REG || strlen(entry->d_name) != 6 + 1 + 3 || strcmp(entry->d_name + 6, ".bin") != 0) // filename + '.' + extension
             continue;
 
         // Copy filename to end of new path
