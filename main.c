@@ -140,35 +140,31 @@ static int parseQuiz(uint8_t *blob, const char *name)
     // Cast the blob into a LANGUAGE_FILE struct
     LANGUAGE_FILE *lf = (LANGUAGE_FILE *)(blob + 0x03);
 
-    // Point and cast to the DIALOGUE structs found in the blob
-    // Each DIALOGUE struct corresponds to one language (EN/FR/DE)
-    DIALOGUE *diags[3];
-    for(int i = 0; i < 3; i++)
-        diags[i] = (DIALOGUE *)(blob + lf->offsets[i]);
-
     // Loop over the DIALOGUE structs to get count of and the pointers for the MESSAGE structs in the blob
     for(int i = 0; i < 3; i++)
     {
         printf("OUTPUT FILE %s\n", lang[i]);
         printf("type: QuizQuestion\n"); // TODO: To file
         printf("question:\n"); //TODO: To file
-        MESSAGE *msg = diags[i]->start;
-        uint8_t count = diags[i]->count;
+
+        // Point and cast to the DIALOGUE structs found in the blob
+        // Each DIALOGUE struct corresponds to one language (EN/FR/DE)
+        DIALOGUE *diag = (DIALOGUE *)(blob + lf->offsets[i]);
+
+        MESSAGE *msg = diag->start;
         bool firstAnswer = true;
 
         // Loop over the MESSAGE structs found
         // Parse them and write out as YAML
-        for(uint8_t j = 0; j < count; j++)
+        for(uint8_t j = 0; j < diag->count; j++)
         {
-            bool answer = msg->cmd & ~(0x80);
-            if(answer && firstAnswer)
+            if(firstAnswer && msg->cmd & ~(0x80))
             {
                 printf("options:\n"); // TODO: To file
                 firstAnswer = false;
             }
 
             transformRareToIso(msg->msg);
-
             printf("  - { cmd: 0x%02X, string: \"%s\" }\n", msg->cmd, msg->msg); // TODO: To file
             msg = (MESSAGE *)(((uint8_t *)msg) + 2 + msg->length);
         }
@@ -192,18 +188,15 @@ static int parseDialog(uint8_t *blob, const char *name)
         return 0;
     }
 
-    LANGUAGE_FILE *lf = (LANGUAGE_FILE *)(blob + 0x01);
-    DIALOGUE *diags[3];
-    for(int i = 0; i < 3; i++)
-        diags[i] = (DIALOGUE *)(blob + lf->offsets[i]);
-
     // The path buffer for the files to write to. The Xes will be replaced later
     char outPath[] = "XX/diag/XXXX.dialog";
     // Replace XXXX with the file name
     memcpy(outPath + sizeof("XX/diag/") - 1, outName, 4);
 
+    LANGUAGE_FILE *lf = (LANGUAGE_FILE *)(blob + 0x01);
     for(int i = 0; i < 3; i++)
     {
+
         // Replace the XX in out path buffer with the language (EN/FR/DE)
         memcpy(outPath, lang[i], 2);
 //        printf("--> %s\n", outPath);
@@ -224,8 +217,9 @@ static int parseDialog(uint8_t *blob, const char *name)
         // Loop over bottom messages
         fprintf(f, "type: Dialog\n");
         fprintf(f, "bottom:\n");
-        MESSAGE *msg = diags[i]->start;
-        uint8_t count = diags[i]->count;
+        DIALOGUE *diag = (DIALOGUE *)(blob + lf->offsets[i]);
+        MESSAGE *msg = diag->start;
+        uint8_t count = diag->count;
         for(uint8_t j = 0; j < count; j++)
         {
             if(msg->cmd & 0x80)
