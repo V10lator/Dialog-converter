@@ -51,6 +51,70 @@ static void mkdirRecursive(const char *path)
     }
 }
 
+/* Replaces characters from Rares character table with ISO-8859-1 */
+static void transformRareToIso(char *string)
+{
+    while(1)
+    {
+        switch(*string)
+        {
+            case 0x5B: // Ä
+                *string = 0xC4;
+                break;
+            case 0x5C: // Ö
+                *string = 0xD6;
+                break;
+            case 0x5D: // Ü
+            case 0x6A:
+                *string = 0xDC;
+                break;
+            case 0x5E: // ß
+                *string = 0xDF;
+                break;
+            case 0x5F: // À
+                *string = 0xC0;
+                break;
+            case 0x60: // Â
+                *string = 0xC2;
+                break;
+            case 0x61: // Ç
+                *string = 0xC7;
+                break;
+            case 0x62: // É
+                *string = 0xC9;
+                break;
+            case 0x63: // È
+                *string = 0xC8;
+                break;
+            case 0x64: // Ê
+                *string = 0xCA;
+                break;
+            case 0x65: // Ë
+                *string = 0xCB;
+                break;
+            case 0x66: // Î
+                *string = 0xCE;
+                break;
+            case 0x67: // Ï
+                *string = 0xCF;
+                break;
+            case 0x68: // Ô
+                *string = 0xD4;
+                break;
+            case 0x69: // Û
+                *string = 0xDB;
+                break;
+            case 0x6B: // Ù
+                *string = 0xD9;
+                break;
+            case '\0':
+                return;
+        }
+
+        string++;
+    }
+}
+
 /*
  * Maps a .bin filename to the corresponding .dialog filename
  *
@@ -102,6 +166,8 @@ static int parseQuiz(uint8_t *blob, const char *name)
                 printf("options:\n"); // TODO: To file
                 firstAnswer = false;
             }
+
+            transformRareToIso(msg->msg);
 
             printf("  - { cmd: 0x%02X, string: \"%s\" }\n", msg->cmd, msg->msg); // TODO: To file
             msg = (MESSAGE *)(((uint8_t *)msg) + 2 + msg->length);
@@ -162,6 +228,9 @@ static int parseDialog(uint8_t *blob, const char *name)
         uint8_t count = diags[i]->count;
         for(uint8_t j = 0; j < count; j++)
         {
+            if(msg->cmd & 0x80)
+                transformRareToIso(msg->msg);
+
             fprintf(f, "  - { cmd: 0x%02X, string: \"%s\" }\n", msg->cmd, msg->msg);
             msg = (MESSAGE *)(((uint8_t *)msg) + 2 + msg->length);
         }
@@ -172,6 +241,9 @@ static int parseDialog(uint8_t *blob, const char *name)
         msg = (MESSAGE *)(((uint8_t *)msg) + 0x01);
         for(uint8_t j = 0; j < count; j++)
         {
+            if(msg->cmd & 0x80)
+                transformRareToIso(msg->msg);
+
             fprintf(f, "  - { cmd: 0x%02X, string: \"%s\" }\n", msg->cmd, msg->msg);
             msg = (MESSAGE *)(((uint8_t *)msg) + 2 + msg->length);
         }
