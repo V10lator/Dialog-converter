@@ -64,10 +64,6 @@ static void transformRareToIso(char *string)
 {
     while(1)
     {
-        // Filter out characters not in Rares table
-        if((unsigned char)*string > 0x6B)
-            *string = '?';
-
         switch(*string)
         {
             case 0x5B: // Ä
@@ -121,6 +117,12 @@ static void transformRareToIso(char *string)
                 break;
             case '\0':
                 return;
+            default:
+                // Filter out characters not in Rares table
+                if((unsigned char)*string > 0x5A)
+                    *string = '?';
+
+                break;
         }
 
         string++;
@@ -133,7 +135,7 @@ static char *transformRareToUtf(char *string)
     size_t sl = strlen(string) + 1;
     size_t j = 0;
     static uint8_t stringBuffer[256];
-    for(size_t i = 0; i < sl; i++)
+    for(size_t i = 0; i < sl; i++, j++)
     {
         if(j >= 254)
         {
@@ -142,82 +144,62 @@ static char *transformRareToUtf(char *string)
             return (char *)stringBuffer;
         }
 
-        // Filter out characters not in Rares table
-        if((unsigned char)string[i] > 0x6B)
-            string[i] = '?';
-
         switch(string[i])
         {
-            case 0x5B: // Ä
-                memcpy(stringBuffer + j, "Ä", sizeof("Ä") - 1);
-                j += sizeof("Ä") - 1;
+            case 0x5B:
+                memcpy(stringBuffer + j++, "Ä", 2); // used sizeof("Ä") - 1 in the past but it's 2 for all chars anyway
                 break;
-            case 0x5C: // Ö
-                memcpy(stringBuffer + j, "Ö", sizeof("Ö") - 1);
-                j += sizeof("Ö") - 1;
+            case 0x5C:
+                memcpy(stringBuffer + j++, "Ö", 2);
                 break;
-            case 0x5D: // Ü
+            case 0x5D:
             case 0x6A:
-                memcpy(stringBuffer + j, "Ü", sizeof("Ü") - 1);
-                j += sizeof("Ü") - 1;
+                memcpy(stringBuffer + j++, "Ü", 2);
                 break;
-            case 0x5E: // ß
-                memcpy(stringBuffer + j, "ß", sizeof("ß") - 1);
-                j += sizeof("ß") - 1;
+            case 0x5E:
+                memcpy(stringBuffer + j++, "ß", 2);
                 break;
-            case 0x5F: // À
-                memcpy(stringBuffer + j, "À", sizeof("À") - 1);
-                j += sizeof("À") - 1;
+            case 0x5F:
+                memcpy(stringBuffer + j++, "À", 2);
                 break;
-            case 0x60: // Â
-                memcpy(stringBuffer + j, "Â", sizeof("Â") - 1);
-                j += sizeof("Â") - 1;
+            case 0x60:
+                memcpy(stringBuffer + j++, "Â", 2);
                 break;
-            case 0x61: // Ç
-                memcpy(stringBuffer + j, "Ç", sizeof("Ç") - 1);
-                j += sizeof("Ç") - 1;
+            case 0x61:
+                memcpy(stringBuffer + j++, "Ç", 2);
                 break;
-            case 0x62: // É
-                memcpy(stringBuffer + j, "É", sizeof("É") - 1);
-                j += sizeof("É") - 1;
+            case 0x62:
+                memcpy(stringBuffer + j++, "É", 2);
                 break;
-            case 0x63: // È
-                memcpy(stringBuffer + j, "È", sizeof("È") - 1);
-                j += sizeof("È") - 1;
+            case 0x63:
+                memcpy(stringBuffer + j++, "È", 2);
                 break;
-            case 0x64: // Ê
-                memcpy(stringBuffer + j, "Ê", sizeof("Ê") - 1);
-                j += sizeof("Ê") - 1;
+            case 0x64:
+                memcpy(stringBuffer + j++, "Ê", 2);
                 break;
-            case 0x65: // Ë
-                memcpy(stringBuffer + j, "Ë", sizeof("Ë") - 1);
-                j += sizeof("Ë") - 1;
+            case 0x65:
+                memcpy(stringBuffer + j++, "Ë", 2);
                 break;
-            case 0x66: // Î
-                memcpy(stringBuffer + j, "Î", sizeof("Î") - 1);
-                j += sizeof("Î") - 1;
+            case 0x66:
+                memcpy(stringBuffer + j++, "Î", 2);
                 break;
-            case 0x67: // Ï
-                memcpy(stringBuffer + j, "Ï", sizeof("Ï") - 1);
-                j += sizeof("Ï") - 1;
+            case 0x67:
+                memcpy(stringBuffer + j++, "Ï", 2);
                 break;
-            case 0x68: // Ô
-                memcpy(stringBuffer + j, "Ô", sizeof("Ô") - 1);
-                j += sizeof("Ô") - 1;
+            case 0x68:
+                memcpy(stringBuffer + j++, "Ô", 2);
                 break;
-            case 0x69: // Û
-                memcpy(stringBuffer + j, "Û", sizeof("Û") - 1);
-                j += sizeof("Û") - 1;
+            case 0x69:
+                memcpy(stringBuffer + j++, "Û", 2);
                 break;
-            case 0x6B: // Ù
-                memcpy(stringBuffer + j, "Ù", sizeof("Ù") - 1);
-                j += sizeof("Ù") - 1;
+            case 0x6B:
+                memcpy(stringBuffer + j++, "Ù", 2);
                 break;
             case '\0':
                 stringBuffer[j] = '\0';
                 return (char *)stringBuffer;
             default:
-                stringBuffer[j++] = string[i];
+                stringBuffer[j] = (unsigned char)string[i] < 0x5B ? string[i] : '?';
                 break;
         }
     }
@@ -310,8 +292,8 @@ static int parseQuiz(uint8_t *blob, const char *name, bool grunty)
             return 1;
         }
 
-        fprintf(f, "type: QuizQuestion\n");
-        fprintf(f, "question:\n");
+        fprintf(f, "type: QuizQuestion\n"
+                   "question:\n");
 
         // Point and cast to the DIALOGUE structs found in the blob
         // Each DIALOGUE struct corresponds to one language (EN/FR/DE)
@@ -389,8 +371,8 @@ static int parseDialog(uint8_t *blob, const char *name)
         }
 
         // Loop over bottom messages
-        fprintf(f, "type: Dialog\n");
-        fprintf(f, "bottom:\n");
+        fprintf(f, "type: Dialog\n"
+                   "bottom:\n");
         DIALOGUE *diag = (DIALOGUE *)(blob + lf->offsets[i]);
         MESSAGE *msg = diag->start;
         uint8_t count = diag->count;
@@ -500,12 +482,12 @@ static int process(const char *name, const char *file)
 
 static void showHelp(char *prog)
 {
-    fprintf(stderr, "Usage: %s [-u|-i|-r]  [-w|-n] input/path\n", prog);
-    fprintf(stderr, "\t-u: Convert strings to UTF-8 (default)\n");
-    fprintf(stderr, "\t-i: Convert strings to ISO-8859-1\n");
-    fprintf(stderr, "\t-r: Dump strings raw (RARE character table)\n");
-    fprintf(stderr, "\t-w: Add weird bytes (\"\\xFDl\") to beginning of answers (needed by Banjo: Recompiled but missing in PAL ROM) (default)\n");
-    fprintf(stderr, "\t-n: Don't add weird bytes (see above)\n");
+    fprintf(stderr, "Usage: %s [-u|-i|-r]  [-w|-n] input/path\n"
+                    "\t-u: Convert strings to UTF-8 (default)\n"
+                    "\t-i: Convert strings to ISO-8859-1\n"
+                    "\t-r: Dump strings raw (RARE character table)\n"
+                    "\t-w: Add weird bytes (\"\\xFDl\") to beginning of answers (needed by Banjo: Recompiled but missing in PAL ROM) (default)\n"
+                    "\t-n: Don't add weird bytes (see above)\n", prog);
 }
 
 /*
