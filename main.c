@@ -155,9 +155,9 @@ static int parseQuiz(uint8_t *blob, const char *name)
     }
 
     // The path buffer for the files to write to. The Xes will be replaced later
-    char outPath[] = "XX/quiz/XXXX.quiz_q";
+    char outPath[] = "XX/quiz_q/XXXX.quiz_q";
     // Replace XXXX with the file name
-    memcpy(outPath + sizeof("XX/quiz/") - 1, outName, 4);
+    memcpy(outPath + sizeof("XX/quiz_q/") - 1, outName, 4);
 
     // Cast the blob into a LANGUAGE_FILE struct
     LANGUAGE_FILE *lf = (LANGUAGE_FILE *)(blob + 0x03);
@@ -168,9 +168,9 @@ static int parseQuiz(uint8_t *blob, const char *name)
         // Replace the XX in out path buffer with the language (EN/FR/DE)
         memcpy(outPath, lang[i], 2);
 
-        outPath[sizeof("XX/quiz") - 1] = '\0';
+        outPath[sizeof("XX/quiz_q") - 1] = '\0';
         mkdirRecursive(outPath);
-        outPath[sizeof("XX/quiz") - 1] = '/';
+        outPath[sizeof("XX/quiz_q") - 1] = '/';
 
         FILE *f = fopen(outPath, "wb");
         if(f == NULL)
