@@ -143,7 +143,8 @@ static const char *mapQuiz(const char *in)
 /*
  * Parse a .bin file representing a .quiz_q file
  *
- * Note that there is no quiz_q map currently, so this function just prints to CLI instead of creating files for now
+ * This will map the .bin file to the corresponding .quiz_q file and create said .quiz_q file with YAML content.
+ * It will write to stderr and skip the .bin file in case of no map entry (no .dialog file to write to known)
  */
 static int parseQuiz(uint8_t *blob, const char *name)
 {
@@ -220,7 +221,7 @@ static int parseQuiz(uint8_t *blob, const char *name)
  * Parse a .bin file representing a .dialog file
  *
  * This will map the .bin file to the corresponding .dialog file and create said .dialog file with YAML content.
- * It will write to CLI and skip the .bin file in case of no map entry (no .dialog file to write to known)
+ * It will write to stderr and skip the .bin file in case of no map entry (no .dialog file to write to known)
  */
 static int parseDialog(uint8_t *blob, const char *name)
 {
