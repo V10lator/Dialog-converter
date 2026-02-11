@@ -29,6 +29,9 @@ typedef struct __attribute__((__packed__))
 } DIALOGUE;
 
 static const char *lang[] = {"EN", "FR", "DE"};
+// TODO: Make configurable:
+static const bool toIso = false;
+static const bool toUtf = true;
 
 /* Creates a directory recursively */
 static void mkdirRecursive(const char *path)
@@ -114,6 +117,100 @@ static void transformRareToIso(char *string)
 
         string++;
     }
+}
+
+/* Replaces characters from Rares character table with UTF-8 */
+static char *transformRareToUtf(char *string)
+{
+    size_t sl = strlen(string) + 1;
+    size_t j = 0;
+    static uint8_t stringBuffer[256];
+    for(size_t i = 0; i < sl; i++)
+    {
+        if(j >= 254)
+        {
+            fprintf(stderr, "BUFFER OVERFLOW!\n");
+            stringBuffer[254] = '\0';
+            return (char *)stringBuffer;
+        }
+
+        switch(string[i])
+        {
+            case 0x5B: // Ä
+                memcpy(stringBuffer + j, "Ä", sizeof("Ä") - 1);
+                j += sizeof("Ä") - 1;
+                break;
+            case 0x5C: // Ö
+                memcpy(stringBuffer + j, "Ö", sizeof("Ö") - 1);
+                j += sizeof("Ö") - 1;
+                break;
+            case 0x5D: // Ü
+            case 0x6A:
+                memcpy(stringBuffer + j, "Ü", sizeof("Ü") - 1);
+                j += sizeof("Ü") - 1;
+                break;
+            case 0x5E: // ß
+                memcpy(stringBuffer + j, "ß", sizeof("ß") - 1);
+                j += sizeof("ß") - 1;
+                break;
+            case 0x5F: // À
+                memcpy(stringBuffer + j, "À", sizeof("À") - 1);
+                j += sizeof("À") - 1;
+                break;
+            case 0x60: // Â
+                memcpy(stringBuffer + j, "Â", sizeof("Â") - 1);
+                j += sizeof("Â") - 1;
+                break;
+            case 0x61: // Ç
+                memcpy(stringBuffer + j, "Ç", sizeof("Ç") - 1);
+                j += sizeof("Ç") - 1;
+                break;
+            case 0x62: // É
+                memcpy(stringBuffer + j, "É", sizeof("É") - 1);
+                j += sizeof("É") - 1;
+                break;
+            case 0x63: // È
+                memcpy(stringBuffer + j, "È", sizeof("È") - 1);
+                j += sizeof("È") - 1;
+                break;
+            case 0x64: // Ê
+                memcpy(stringBuffer + j, "Ê", sizeof("Ê") - 1);
+                j += sizeof("Ê") - 1;
+                break;
+            case 0x65: // Ë
+                memcpy(stringBuffer + j, "Ë", sizeof("Ë") - 1);
+                j += sizeof("Ë") - 1;
+                break;
+            case 0x66: // Î
+                memcpy(stringBuffer + j, "Î", sizeof("Î") - 1);
+                j += sizeof("Î") - 1;
+                break;
+            case 0x67: // Ï
+                memcpy(stringBuffer + j, "Ï", sizeof("Ï") - 1);
+                j += sizeof("Ï") - 1;
+                break;
+            case 0x68: // Ô
+                memcpy(stringBuffer + j, "Ô", sizeof("Ô") - 1);
+                j += sizeof("Ô") - 1;
+                break;
+            case 0x69: // Û
+                memcpy(stringBuffer + j, "Û", sizeof("Û") - 1);
+                j += sizeof("Û") - 1;
+                break;
+            case 0x6B: // Ù
+                memcpy(stringBuffer + j, "Ù", sizeof("Ù") - 1);
+                j += sizeof("Ù") - 1;
+                break;
+            case '\0':
+                stringBuffer[j] = '\0';
+                return (char *)stringBuffer;
+            default:
+                stringBuffer[j++] = string[i];
+                break;
+        }
+    }
+
+    return string;
 }
 
 /*
@@ -221,14 +318,19 @@ static int parseQuiz(uint8_t *blob, const char *name, bool grunty)
                 firstAnswer = false;
             }
 
-            transformRareToIso(msg->msg);
             fprintf(f, "  - { cmd: 0x%02X, string: \"", msg->cmd);
 
             // TODO: WTF?
             if(!firstAnswer)
                 fprintf(f, "\\xFDl");
 
-            fprintf(f, "%s\" }\n", msg->msg);
+            char *m = msg->msg;
+            if(toIso)
+                transformRareToIso(m);
+            else if(toUtf)
+                m = transformRareToUtf(m);
+
+            fprintf(f, "%s\" }\n", m);
             msg = (MESSAGE *)(((uint8_t *)msg) + 2 + msg->length);
         }
 
@@ -282,10 +384,16 @@ static int parseDialog(uint8_t *blob, const char *name)
         uint8_t count = diag->count;
         for(uint8_t j = 0; j < count; j++)
         {
+            char *m = msg->msg;
             if(msg->cmd & 0x80)
-                transformRareToIso(msg->msg);
+            {
+                if(toIso)
+                    transformRareToIso(m);
+                else if(toUtf)
+                    m = transformRareToUtf(m);
+            }
 
-            fprintf(f, "  - { cmd: 0x%02X, string: \"%s\" }\n", msg->cmd, msg->msg);
+            fprintf(f, "  - { cmd: 0x%02X, string: \"%s\" }\n", msg->cmd, m);
             msg = (MESSAGE *)(((uint8_t *)msg) + 2 + msg->length);
         }
 
@@ -295,10 +403,16 @@ static int parseDialog(uint8_t *blob, const char *name)
         msg = (MESSAGE *)(((uint8_t *)msg) + 0x01);
         for(uint8_t j = 0; j < count; j++)
         {
+            char *m = msg->msg;
             if(msg->cmd & 0x80)
-                transformRareToIso(msg->msg);
+            {
+                if(toIso)
+                    transformRareToIso(m);
+                else if(toUtf)
+                    m = transformRareToUtf(m);
+            }
 
-            fprintf(f, "  - { cmd: 0x%02X, string: \"%s\" }\n", msg->cmd, msg->msg);
+            fprintf(f, "  - { cmd: 0x%02X, string: \"%s\" }\n", msg->cmd, m);
             msg = (MESSAGE *)(((uint8_t *)msg) + 2 + msg->length);
         }
 
@@ -418,7 +532,7 @@ int main(int argc, char *argv[])
     // Close the folder and exit the program
     closedir(folder);
     if(ret == 0)
-        printf("Done");
+        printf("Done\n");
 
     return ret;
 }
