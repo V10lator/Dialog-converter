@@ -150,7 +150,7 @@ static int parseQuiz(uint8_t *blob, const char *name)
     const char *outName = mapQuiz(name);
     if(outName == NULL)
     {
-        fprintf(stderr, "No map entry for %s.bin\n", name);
+        fprintf(stderr, "No map entry for quiz_q %s.bin\n", name);
         return 0;
     }
 
@@ -227,7 +227,7 @@ static int parseDialog(uint8_t *blob, const char *name)
     const char *outName = mapDialog(name);
     if(outName == NULL)
     {
-        fprintf(stderr, "No map entry for %s.bin\n", name);
+        fprintf(stderr, "No map entry for dialog %s.bin\n", name);
         return 0;
     }
 
