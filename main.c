@@ -28,10 +28,13 @@ typedef struct __attribute__((__packed__))
     MESSAGE start[];
 } DIALOGUE;
 
+#define TO_RAW 0x00
+#define TO_ISO 0x01
+#define TO_UTF 0x02
+
 static const char *lang[] = {"EN", "FR", "DE"};
 // TODO: Make configurable:
-static const bool toIso = false;
-static const bool toUtf = true;
+static unsigned int convert = TO_UTF;
 
 /* Creates a directory recursively */
 static void mkdirRecursive(const char *path)
@@ -333,9 +336,9 @@ static int parseQuiz(uint8_t *blob, const char *name, bool grunty)
                 fprintf(f, "\\xFDl");
 
             char *m = msg->msg;
-            if(toIso)
+            if(convert & TO_ISO)
                 transformRareToIso(m);
-            else if(toUtf)
+            else if(convert & TO_UTF)
                 m = transformRareToUtf(m);
 
             fprintf(f, "%s\" }\n", m);
@@ -395,9 +398,9 @@ static int parseDialog(uint8_t *blob, const char *name)
             char *m = msg->msg;
             if(msg->cmd & 0x80)
             {
-                if(toIso)
+                if(convert & TO_ISO)
                     transformRareToIso(m);
-                else if(toUtf)
+                else if(convert & TO_UTF)
                     m = transformRareToUtf(m);
             }
 
@@ -414,9 +417,9 @@ static int parseDialog(uint8_t *blob, const char *name)
             char *m = msg->msg;
             if(msg->cmd & 0x80)
             {
-                if(toIso)
+                if(convert & TO_ISO)
                     transformRareToIso(m);
-                else if(toUtf)
+                else if(convert & TO_UTF)
                     m = transformRareToUtf(m);
             }
 
@@ -494,6 +497,14 @@ static int process(const char *name, const char *file)
     return ret;
 }
 
+static void showHelp(char *prog)
+{
+    fprintf(stderr, "Usage: %s [-u|-i|-r] input/path\n", prog);
+    fprintf(stderr, "\t-u: Convert strings to UTF-8 (default)\n");
+    fprintf(stderr, "\t-i: Convert strings to ISO-8859-1\n");
+    fprintf(stderr, "\t-r: Dump strings raw (RARE character table)\n");
+}
+
 /*
  * Entry function of the program
  *
@@ -504,22 +515,64 @@ int main(int argc, char *argv[])
     // Check if argument is there
     if(argc < 2)
     {
-        fprintf(stderr, "Usage: %s input/path\n", argv[0]);
+        showHelp(argv[0]);
         return 1;
     }
 
+    const char *path = argv[--argc];
+    if(argc > 1)
+    {
+        for(int i = 1; i < argc; i++)
+        {
+            if(argv[i][0] != '-')
+            {
+                showHelp(argv[0]);
+                return 1;
+            }
+
+            switch(argv[i][1])
+            {
+                case 'i':
+                    convert = TO_ISO;
+                    break;
+                case 'u':
+                    convert = TO_UTF;
+                    break;
+                case 'r':
+                    convert = TO_RAW;
+                    break;
+                default:
+                    showHelp(argv[0]);
+                    return 1;
+            }
+
+            if(argv[i][2] != '\0')
+            {
+                showHelp(argv[0]);
+                return 1;
+            }
+        }
+    }
+
+    if(convert & TO_UTF)
+        printf("Converting strings to UTF-8\n");
+    else if(convert & TO_ISO)
+        printf("Converting strings to ISO-8859-1\n");
+    else
+        printf("Dumping strings raw (RARE character table)\n");
+
     // Open directory
-    DIR *folder = opendir(argv[1]);
+    DIR *folder = opendir(path);
     if(!folder)
     {
-        fprintf(stderr, "Error opening %s\n", argv[1]);
+        fprintf(stderr, "Error opening %s\n", path);
         return 1;
     }
 
     // Loop over all files in the folder, create a new path array containing the folder + the filename and process the files
-    size_t sl = strlen(argv[1]);
+    size_t sl = strlen(path);
     char newPath[sl + (1 + 6 + 1 + 3 + 1)]; // path + '/' + filename + '.' + extension + '\0'
-    memcpy(newPath, argv[1], sl);
+    memcpy(newPath, path, sl);
     newPath[sl++] = '/';
     newPath[sl + (6 + 1 + 3)] = '\0'; // Add null terminator to end of buffer as memcpy will not copy it later
     struct dirent *entry;
