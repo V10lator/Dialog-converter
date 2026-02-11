@@ -1,6 +1,6 @@
 #include "dialogDic.h"
 
-char *diagInList[DIAG_LIST_MAX] = {
+char diagInList[DIAG_LIST_MAX][6] = {
     "5CA9F8",
     "5CABF8",
     "5CAC80",
@@ -715,7 +715,7 @@ char *diagInList[DIAG_LIST_MAX] = {
     "5DF950",
 };
 
-char *diagOutList[DIAG_LIST_MAX] = {
+char diagOutList[DIAG_LIST_MAX][4] = {
     "0A0B",
     "0A0C",
     "0A0D",

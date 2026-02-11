@@ -1,6 +1,6 @@
 #include "quizDic.h"
 
-const char *quizInList[QUIZ_LIST_MAX] = {
+const char quizInList[QUIZ_LIST_MAX][6] = {
     "5F14C8", "5F1A10", "5F1DF0", "5F1F18", "5F2610", "5F2D30", "5F3028", "5F3368", "5F3778", "5F4010",
     "5F4540", "5F5018", "5F5550", "5F5668", "5F5CC0", "5F5ED0", "5F6270", "5F6478", "5F65A8", "5F66B0",
     "5F6A28", "5F6D70", "5F7188", "5F73A8", "5F74F0", "5F7CD0", "5F7DD8", "5F8380", "5F8520", "5F86D8",
@@ -20,7 +20,7 @@ const char *quizInList[QUIZ_LIST_MAX] = {
     "5FA0E0", "5FA208", "5FA450", "5FA568", "5FA7C0", "5FAFA0", "5FB1E8", "5FBA90", "5FBE90", "5F63A0",
 };
 
-const char *quizOutList[QUIZ_LIST_MAX] = {
+const char quizOutList[QUIZ_LIST_MAX][4] = {
     "1217", "121D", "1221", "1222", "1229", "1230", "1233", "1236", "123A", "1242",
     "1247", "1252", "1257", "1258", "125E", "1260", "1263", "1265", "1266", "1267",
     "126A", "126D", "1271", "1273", "1274", "12DF", "12E0", "12E6", "12E8", "12EA",
