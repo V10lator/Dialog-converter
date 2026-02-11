@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
     char newPath[sl + (1 + 6 + 1 + 3 + 1)]; // path + '/' + filename + '.' + extension + '\0'
     memcpy(newPath, argv[1], sl);
     newPath[sl++] = '/';
-    newPath[sl + (1 + 6 + 1 + 3)] = '\0'; // Add null terminator to end of buffer as memcpy will not copy it later
+    newPath[sl + (6 + 1 + 3)] = '\0'; // Add null terminator to end of buffer as memcpy will not copy it later
     struct dirent *entry;
     int ret = 0;
     while (ret == 0 && (entry = readdir(folder)) != NULL) {
