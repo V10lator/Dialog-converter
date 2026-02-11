@@ -278,12 +278,12 @@ static int parseQuiz(uint8_t *blob, const char *name, bool grunty)
     size_t pl;
     if(grunty)
     {
-        strcpy(outPath, "XX/grunty_q/XXXX.grunty_q");
+        memcpy(outPath, "XX/grunty_q/XXXX.grunty_q", sizeof("XX/grunty_q/XXXX.grunty_q"));
         pl = sizeof("XX/grunty_q/") - 1;
     }
     else
     {
-        strcpy(outPath, "XX/quiz_q/XXXX.quiz_q");
+        memcpy(outPath, "XX/quiz_q/XXXX.quiz_q", sizeof("XX/quiz_q/XXXX.quiz_q"));
         pl = sizeof("XX/quiz_q/") - 1;
     }
 
