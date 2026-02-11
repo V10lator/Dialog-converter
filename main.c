@@ -60,6 +60,10 @@ static void transformRareToIso(char *string)
 {
     while(1)
     {
+        // Filter out characters not in Rares table
+        if((unsigned char)*string > 0x6B)
+            *string = '?';
+
         switch(*string)
         {
             case 0x5B: // Ä
@@ -133,6 +137,10 @@ static char *transformRareToUtf(char *string)
             stringBuffer[254] = '\0';
             return (char *)stringBuffer;
         }
+
+        // Filter out characters not in Rares table
+        if((unsigned char)string[i] > 0x6B)
+            string[i] = '?';
 
         switch(string[i])
         {
