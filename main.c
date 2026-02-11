@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #include "dialogDic.h"
+#include "quizDic.h"
 
 typedef struct __attribute__((__packed__))
 {
@@ -130,6 +131,15 @@ static const char *mapDialog(const char *in)
     return NULL;
 }
 
+static const char *mapQuiz(const char *in)
+{
+    for(size_t i = 0; i < QUIZ_LIST_MAX; i++)
+        if(memcmp(in, quizInList[i], 6) == 0)
+            return quizOutList[i];
+
+    return NULL;
+}
+
 /*
  * Parse a .bin file representing a .quiz_q file
  *
@@ -137,15 +147,40 @@ static const char *mapDialog(const char *in)
  */
 static int parseQuiz(uint8_t *blob, const char *name)
 {
+    const char *outName = mapQuiz(name);
+    if(outName == NULL)
+    {
+        fprintf(stderr, "No map entry for %s.bin\n", name);
+        return 0;
+    }
+
+    // The path buffer for the files to write to. The Xes will be replaced later
+    char outPath[] = "XX/quiz/XXXX.quiz_q";
+    // Replace XXXX with the file name
+    memcpy(outPath + sizeof("XX/quiz/") - 1, outName, 4);
+
     // Cast the blob into a LANGUAGE_FILE struct
     LANGUAGE_FILE *lf = (LANGUAGE_FILE *)(blob + 0x03);
 
     // Loop over the DIALOGUE structs to get count of and the pointers for the MESSAGE structs in the blob
     for(int i = 0; i < 3; i++)
     {
-        printf("OUTPUT FILE %s\n", lang[i]);
-        printf("type: QuizQuestion\n"); // TODO: To file
-        printf("question:\n"); //TODO: To file
+        // Replace the XX in out path buffer with the language (EN/FR/DE)
+        memcpy(outPath, lang[i], 2);
+
+        outPath[sizeof("XX/quiz") - 1] = '\0';
+        mkdirRecursive(outPath);
+        outPath[sizeof("XX/quiz") - 1] = '/';
+
+        FILE *f = fopen(outPath, "wb");
+        if(f == NULL)
+        {
+            fprintf(stderr, "Error opening %s\n", outPath);
+            return 1;
+        }
+
+        fprintf(f, "type: QuizQuestion\n");
+        fprintf(f, "question:\n");
 
         // Point and cast to the DIALOGUE structs found in the blob
         // Each DIALOGUE struct corresponds to one language (EN/FR/DE)
@@ -160,21 +195,29 @@ static int parseQuiz(uint8_t *blob, const char *name)
         {
             if(firstAnswer && msg->cmd & ~(0x80))
             {
-                printf("options:\n"); // TODO: To file
+                fprintf(f, "options:\n");
                 firstAnswer = false;
             }
 
             transformRareToIso(msg->msg);
-            printf("  - { cmd: 0x%02X, string: \"%s\" }\n", msg->cmd, msg->msg); // TODO: To file
+            fprintf(f, "  - { cmd: 0x%02X, string: \"", msg->cmd);
+
+            // TODO: WTF?
+            if(!firstAnswer)
+                fprintf(f, "\\xFDl");
+
+            fprintf(f, "%s\" }\n", msg->msg);
             msg = (MESSAGE *)(((uint8_t *)msg) + 2 + msg->length);
         }
+
+        fclose(f);
     }
 
     return 0;
 }
 
 /*
- * Parse a .bin file representing a .quiz_q file
+ * Parse a .bin file representing a .dialog file
  *
  * This will map the .bin file to the corresponding .dialog file and create said .dialog file with YAML content.
  * It will write to CLI and skip the .bin file in case of no map entry (no .dialog file to write to known)
@@ -188,23 +231,18 @@ static int parseDialog(uint8_t *blob, const char *name)
         return 0;
     }
 
-    // The path buffer for the files to write to. The Xes will be replaced later
-    char outPath[] = "XX/diag/XXXX.dialog";
-    // Replace XXXX with the file name
-    memcpy(outPath + sizeof("XX/diag/") - 1, outName, 4);
+    char outPath[] = "XX/dialog/XXXX.dialog";
+    memcpy(outPath + sizeof("XX/dialog/") - 1, outName, 4);
 
     LANGUAGE_FILE *lf = (LANGUAGE_FILE *)(blob + 0x01);
     for(int i = 0; i < 3; i++)
     {
-
-        // Replace the XX in out path buffer with the language (EN/FR/DE)
         memcpy(outPath, lang[i], 2);
 //        printf("--> %s\n", outPath);
 
-        // Create the path for the file recursively
-        outPath[sizeof("XX/diag") - 1] = '\0';
+        outPath[sizeof("XX/dialog") - 1] = '\0';
         mkdirRecursive(outPath);
-        outPath[sizeof("XX/diag") - 1] = '/';
+        outPath[sizeof("XX/dialog") - 1] = '/';
 
         // Open the .dialog file for writing and write YAML to it
         FILE *f = fopen(outPath, "wb");
@@ -279,12 +317,10 @@ static int process(const char *name, const char *file)
                         switch(magic)
                         {
                             case 0x0703: // .dialog
-                                //            printf("Converting dialog %s\n", file);
                                 ret = parseDialog(blob, name);
                                 break;
                             case 0x0303: // .quiz_q
                             case 0x0103:
-                                printf("Converting quiz_q %s\n", file);
                                 ret = parseQuiz(blob, name);
                                 break;
                             default:
