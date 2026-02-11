@@ -393,5 +393,8 @@ int main(int argc, char *argv[])
 
     // Close the folder and exit the program
     closedir(folder);
+    if(ret == 0)
+        printf("Done");
+
     return ret;
 }
