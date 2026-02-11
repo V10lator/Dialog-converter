@@ -140,15 +140,24 @@ static const char *mapQuiz(const char *in)
     return NULL;
 }
 
+static const char *mapGrunty(const char *in)
+{
+    for(size_t i = 0; i < GRUNTY_LIST_MAX; i++)
+        if(memcmp(in, gruntyInList[i], 6) == 0)
+            return gruntyOutList[i];
+
+    return NULL;
+}
+
 /*
  * Parse a .bin file representing a .quiz_q file
  *
  * This will map the .bin file to the corresponding .quiz_q file and create said .quiz_q file with YAML content.
  * It will write to stderr and skip the .bin file in case of no map entry (no .dialog file to write to known)
  */
-static int parseQuiz(uint8_t *blob, const char *name)
+static int parseQuiz(uint8_t *blob, const char *name, bool grunty)
 {
-    const char *outName = mapQuiz(name);
+    const char *outName = grunty ? mapGrunty(name) : mapQuiz(name);
     if(outName == NULL)
     {
         fprintf(stderr, "No map entry for quiz_q %s.bin\n", name);
@@ -156,9 +165,21 @@ static int parseQuiz(uint8_t *blob, const char *name)
     }
 
     // The path buffer for the files to write to. The Xes will be replaced later
-    char outPath[] = "XX/quiz_q/XXXX.quiz_q";
+    char outPath[grunty ? sizeof("XX/grunty_q/XXXX.grunty_q") : sizeof("XX/quiz_q/XXXX.quiz_q")];
+    size_t pl;
+    if(grunty)
+    {
+        strcpy(outPath, "XX/grunty_q/XXXX.grunty_q");
+        pl = sizeof("XX/grunty_q/") - 1;
+    }
+    else
+    {
+        strcpy(outPath, "XX/quiz_q/XXXX.quiz_q");
+        pl = sizeof("XX/quiz_q/") - 1;
+    }
+
     // Replace XXXX with the file name
-    memcpy(outPath + sizeof("XX/quiz_q/") - 1, outName, 4);
+    memcpy(outPath + pl--, outName, 4);
 
     // Cast the blob into a LANGUAGE_FILE struct
     LANGUAGE_FILE *lf = (LANGUAGE_FILE *)(blob + 0x03);
@@ -169,9 +190,9 @@ static int parseQuiz(uint8_t *blob, const char *name)
         // Replace the XX in out path buffer with the language (EN/FR/DE)
         memcpy(outPath, lang[i], 2);
 
-        outPath[sizeof("XX/quiz_q") - 1] = '\0';
+        outPath[pl] = '\0';
         mkdirRecursive(outPath);
-        outPath[sizeof("XX/quiz_q") - 1] = '/';
+        outPath[pl] = '/';
 
         FILE *f = fopen(outPath, "wb");
         if(f == NULL)
@@ -315,14 +336,16 @@ static int process(const char *name, const char *file)
                     if(fread(blob, filesize, 1, f) == 1)
                     {
                         uint16_t magic = *(uint16_t *)blob;
+                        bool grunty = false;
                         switch(magic)
                         {
                             case 0x0703: // .dialog
                                 ret = parseDialog(blob, name);
                                 break;
-                            case 0x0303: // .quiz_q
-                            case 0x0103:
-                                ret = parseQuiz(blob, name);
+                            case 0x0303: // .grunty_q
+                                grunty = true;
+                            case 0x0103: // .quiz_q
+                                ret = parseQuiz(blob, name, grunty);
                                 break;
                             default:
                                 fprintf(stderr, "Unknown file magic for %s: 0x%04X\n", file, magic);
