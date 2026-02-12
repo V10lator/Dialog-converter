@@ -64,7 +64,7 @@ static void transformRareToIso(char *string)
 {
     while(1)
     {
-        switch(*string)
+        switch((unsigned char)*string)
         {
             case 0x5B: // Ä
                 *string = 0xC4;
@@ -115,6 +115,8 @@ static void transformRareToIso(char *string)
             case 0x6B: // Ù
                 *string = 0xD9;
                 break;
+            case 0xFC: // Control code like text shade, wobbly text, ...
+                string++; // Ignore next character
             case '\0':
                 return;
             default:
@@ -138,6 +140,13 @@ static char *transformRareToUtf(char *string)
             fprintf(stderr, "BUFFER OVERFLOW!\n");
             stringBuffer[254] = '\0';
             return (char *)stringBuffer;
+        }
+
+        if((unsigned char)string[i] == 0xFD) // control code like text shade, wobbly text, ...
+        {
+            stringBuffer[j++] = string[i++];
+            stringBuffer[j] = string[i];
+            continue;
         }
 
         switch(string[i])
