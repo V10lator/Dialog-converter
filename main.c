@@ -330,34 +330,6 @@ static int parseQuiz(uint8_t *blob, const char *name, bool grunty)
     return 0;
 }
 
-// Transforms a 4 character (excluding null terminator) hex string to bytes
-static uint32_t hexHex(const char *name)
-{
-    uint32_t ret = 0;
-    for(unsigned int i = 0; i < 4; i++)
-    {
-        uint32_t c = name[3 - i];
-        if(c == '0')
-            continue;
-
-        // Lowercase to Uppercase
-        if(c >= 'a')
-            c -= 0x20;
-
-        // Map 'A' behind '9'
-        if(c >= 'A')
-            c -= 0x07;
-
-        // map '1' to 0x01
-        c -= 0x30;
-
-        c <<= 4 * i;
-        ret += c;
-    }
-
-    return ret;
-}
-
 /*
  * Parse a .bin file representing a .dialog file
  *
@@ -377,10 +349,6 @@ static int parseDialog(uint8_t *blob, const char *name)
     memcpy(outPath + sizeof("XX/dialog/") - 1, outName, 4);
 
     LANGUAGE_FILE *lf = (LANGUAGE_FILE *)(blob + 0x01);
-
-    uint32_t hex = hexHex(outName);
-    bool brentilda = hex >= 0x1083 && hex <= 0x1099;
-
     for(int i = 0; i < 3; i++)
     {
         memcpy(outPath, lang[i], 2);
@@ -404,15 +372,19 @@ static int parseDialog(uint8_t *blob, const char *name)
         DIALOGUE *diag = (DIALOGUE *)(blob + lf->offsets[i]);
         MESSAGE *msg = diag->start;
         uint8_t count = diag->count;
+        bool special = false;
         for(uint8_t j = 0; j < count; j++)
         {
             char *m = msg->msg;
-            if(brentilda || (msg->cmd & 0x80))
+            if((msg->cmd & 0x80) || (special && (msg->cmd & 0x08)))
             {
                 if(convert & TO_ISO)
                     transformRareToIso(m);
                 else if(convert & TO_UTF)
                     m = transformRareToUtf(m);
+
+                if(!special)
+                    special = msg->cmd & 0x40 || msg->cmd == 0xBC; // is 0xBC a game bug? Cause others are 0xCB, 0xD0, 0xD1
             }
 
             fprintf(f, "  - { cmd: 0x%02X, string: \"%s\" }\n", msg->cmd, m);
