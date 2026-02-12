@@ -118,10 +118,6 @@ static void transformRareToIso(char *string)
             case '\0':
                 return;
             default:
-                // Filter out characters not in Rares table
-                if((unsigned char)*string > 0x5A)
-                    *string = '?';
-
                 break;
         }
 
@@ -199,7 +195,7 @@ static char *transformRareToUtf(char *string)
                 stringBuffer[j] = '\0';
                 return (char *)stringBuffer;
             default:
-                stringBuffer[j] = (unsigned char)string[i] < 0x5B ? string[i] : '?';
+                stringBuffer[j] = string[i];
                 break;
         }
     }
