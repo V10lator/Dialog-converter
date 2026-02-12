@@ -31,11 +31,12 @@ typedef struct __attribute__((__packed__))
 #define TO_RAW 0x00
 #define TO_ISO 0x01
 #define TO_UTF 0x02
-#define TO_WTF 0x04
+#define TO_CON 0x04
+#define TO_COM 0x08
 
 static const char *lang[] = {"EN", "FR", "DE"};
 // TODO: Make configurable:
-static unsigned int convert = TO_UTF | TO_WTF;
+static unsigned int convert = TO_UTF | TO_CON | TO_COM;
 
 /* Creates a directory recursively */
 static void mkdirRecursive(const char *path)
@@ -319,9 +320,13 @@ static int parseQuiz(uint8_t *blob, const char *name, bool grunty)
 
             fprintf(f, "  - { cmd: 0x%02X, string: \"", msg->cmd);
 
-            // TODO: WTF?
-            if(!firstAnswer && (convert & TO_WTF))
-                fprintf(f, "\\xFDl");
+            if(!firstAnswer && (convert & TO_CON))
+            {
+                if(convert & TO_COM)
+                    fprintf(f, "%c%c", 0xFD, 'l');
+                else
+                    fprintf(f, "\\xFDl");
+            }
 
             char *m = msg->msg;
             if(convert & TO_ISO)
@@ -491,12 +496,13 @@ static int process(const char *name, const char *file)
 
 static void showHelp(char *prog)
 {
-    fprintf(stderr, "Usage: %s [-u|-i|-r]  [-w|-n] input/path\n"
+    fprintf(stderr, "Usage: %s [-u|-i|-r]  [-w|-c|-n] input/path\n"
                     "\t-u: Convert strings to UTF-8 (default)\n"
                     "\t-i: Convert strings to ISO-8859-1\n"
                     "\t-r: Dump strings raw (RARE character table)\n"
-                    "\t-w: Add weird bytes (\"\\xFDl\") to beginning of answers (needed by Banjo: Recompiled but missing in PAL ROM) (default)\n"
-                    "\t-n: Don't add weird bytes (see above)\n", prog);
+                    "\t-w: Add control bytes (\"\\xFDl\") to beginning of answers (needed by Banjo: Recompiled but missing in PAL ROM)\n"
+                    "\t-c: Add compressed control bytes (same as above but instead of writing as escape codes write them binary) (default)\n"
+                    "\t-n: Don't add control bytes (see above)\n", prog);
 }
 
 /*
@@ -538,10 +544,14 @@ int main(int argc, char *argv[])
                     convert &= ~(TO_UTF | TO_ISO);
                     break;
                 case 'w':
-                    convert |= TO_WTF;
+                    convert &= ~(TO_COM);
+                    convert |= TO_CON;
+                    break;
+                case 'c':
+                    convert |= TO_CON | TO_COM;
                     break;
                 case 'n':
-                    convert &= ~(TO_WTF);
+                    convert &= ~(TO_CON | TO_COM);
                     break;
                 default:
                     showHelp(argv[0]);
@@ -563,8 +573,8 @@ int main(int argc, char *argv[])
     else
         printf("Dumping strings raw (RARE character table)");
 
-    if(convert & TO_WTF)
-        printf(" (adding weird bytes to answers)");
+    if(convert & TO_CON)
+        printf(" (adding control bytes to answers)");
 
     printf("\n");
 
